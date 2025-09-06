@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>🌾magna🪴</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <!-- Floating header logo -->
+  <div class="floating-logo">🌾magna🪴</div>
+
+  <!-- Background logo -->
+  <div class="background-logo">🪴🌾</div>
+
+  <!-- Chat box -->
+  <div class="chat-box">
+    <div class="messages" id="messages"></div>
+    <div class="input-area">
+      <button data-command="cancel" data-icon="❌">Cancel</button>
+      <input type="text" id="userInput" placeholder="Welcome to magna." />
+      <button id="sendBtn">Send</button>
+    </div>
+  </div>
+
+  <!-- Panel -->
+ <div class="panel">
+  <div class="Panel_Title">Service Menu</div>
+    <div class="Panel_Label">Quick Actions</div>
+    <button data-command="time" data-icon="⏰">Time</button>
+    <button data-command="date" data-icon="📅">Date</button>
+    <button data-command="system info" data-icon="🖥">System</button>
+
+    <div class="Panel_Label">Property</div>
+    <button data-command="register property" data-icon="🏡">Register</button>
+    <button data-command="verify land" data-icon="📝">Verify</button>
+    <button data-command="deed search" data-icon="📃">Title Deed</button>
+
+    <div class="Panel_Label">Search</div>
+    <button data-command="search" data-icon="🔎">Search</button>
+
+    <div class="Panel_Label">Music</div>
+    <button data-command="play" data-icon="🎵">Play YouTube</button>
+  </div>
+
+
+  <script>
+const messages = document.getElementById("messages");
+const inputEl = document.getElementById("userInput");
+const sendBtn = document.getElementById("sendBtn");
+
+// Append message to chat area
+function appendMessage(sender, content) {
+  const div = document.createElement("div");
+  div.classList.add("message");
+  div.classList.add(sender === "You" ? "user" : "magna");
+
+  // Handle video payload
+  if (content && typeof content === "object" && content.type === "video") {
+    div.classList.add("video");
+    div.innerHTML = `
+      <p>${content.message || "Playing..."}</p>
+      <iframe
+        width="320" height="180"
+        src="${content.url}"
+        frameborder="0"
+        allow="autoplay; encrypted-media"
+        allowfullscreen>
+      </iframe>
+    `;
+  } else {
+    div.textContent = typeof content === "string" ? content : JSON.stringify(content);
+  }
+
+  messages.appendChild(div);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+// Send user message to backend
+async function sendMessage() {
+  const text = inputEl.value.trim();
+  if (!text) return;
+
+  appendMessage("You", text);
+  inputEl.value = "";
+
+  try {
+    const res = await fetch("/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: text })
+    });
+    const data = await res.json();
+
+    // Handle backend response formats
+    if (data.type === "text") {
+      appendMessage("magna", data.message);
+    } else if (data.type === "video") {
+      appendMessage("magna", data); // video object with url & message
+    } else if (data.reply) {
+      appendMessage("magna", data.reply); // fallback for older format
+    } else {
+      appendMessage("magna", "Oops 😅 unexpected response.");
+    }
+
+  } catch (e) {
+    appendMessage("magna", "Oops 😅 something went wrong!");
+    console.error(e);
+  }
+}
+
+// Send on Enter key
+inputEl.addEventListener("keypress", (e) => {
+  if (e.key === "Enter") sendMessage();
+});
+
+// Send on Send button click
+sendBtn.addEventListener("click", sendMessage);
+
+// Panel buttons (for commands)
+document.querySelectorAll(".panel button").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const cmd = btn.getAttribute("data-command");
+    if (cmd) {
+      inputEl.value = cmd;
+      sendMessage();
+    }
+  });
+});
+
+// Input area buttons (like cancel)
+document.querySelectorAll(".input-area button").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const cmd = btn.getAttribute("data-command");
+    if (cmd) {
+      inputEl.value = cmd;
+      sendMessage();
+    }
+  });
+});
+  </script>
+</body>
+</html>
